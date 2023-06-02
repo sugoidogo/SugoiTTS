@@ -1,0 +1,228 @@
+<title>SugoiTTS</title>
+<h1>SugoiTTS</h1>
+<div id="status">Loading...</div>
+<br>
+<div id="content" hidden>
+    <form name="new">
+        <label>
+            Redeem Name:
+            <input type="text" name="name" required>
+            <button>Create Redeem</button>
+        </label>
+    </form>
+    <form name="config">
+        <div id="redeems"></div>
+        <button>save changes</button>
+    </form>
+</div>
+<a id="prompt" href="https://www.twitch.tv/subs/sugoidogo">Subscribe to unlock SSML and Neural Voices</a>
+<template id="redeem">
+    <form class="redeem">
+        Redeem Name:
+        <span id="title"></span>
+        <br>
+        <label>
+            Voice:
+            <input type="search" list="voices" name="voice" required>
+        </label>
+        <br>
+        <label>
+            <input type="checkbox" name="ssml" disabled>
+            Use SSML (requires tier 1 sub)
+        </label>
+        <br>
+        <label>
+            <input type="checkbox" name="neural" disabled>
+            Use Neural Voice (requires tier 2 sub)
+        </label>
+        <br>
+        <a target="_blank"></a>
+        <br>
+        <button type="button" id="delete" onclick="remove(this.parentElement)">delete</button>
+        <br>
+    </form>
+</template>
+<datalist id="voices"></datalist>
+<datalist id="languages"></datalist>
+<style>
+    .redeem {
+        border-left: 1px solid black;
+        padding-left: 10px;
+    }
+</style>
+<script>
+    const client_id='1gsnqnvtrguxysilfqp5gkb1snswmf'
+    const scope='channel:manage:redemptions channel:read:redemptions'
+    const status_div=document.querySelector('div#status')
+    const new_form=document.querySelector('form[name=new]')
+    const redeem_template=document.querySelector('template#redeem').content.firstElementChild
+    const redeem_list=document.querySelector('div#redeems')
+    const voice_ids=[]
+    const ts_url='https://ts.sugoidogo.com/'
+    const tba_url='https://tba.sugoidogo.com/'
+    const twitch_polly_url='https://tts.sugoidogo.com/'
+    let tokens
+
+    function add_redeem(id,title,config){
+        const redeem_form=redeem_template.cloneNode(true)
+        redeem_form.name=id
+        redeem_form.querySelector('span#title').innerHTML=title
+        const a=redeem_form.querySelector('a')
+        let url=(location.origin+location.pathname).split('/')
+        url.pop()
+        url.push('overlay.html')
+        url=url.join('/')
+        url=new URL(url)
+        url.search=new URLSearchParams({
+            'refresh_token':tokens.refresh_token,
+            'redeem_id':id
+        })
+        a.href=url.href
+        a.innerHTML=url.href
+        for(const name in config){
+            redeem_form[name].value=config[name]
+            if(redeem_form[name].type=='checkbox'){
+                redeem_form[name].checked=name in config
+            }
+        }
+        redeem_list.appendChild(redeem_form)
+    }
+
+    function save(){
+        for(const form of redeem_list.children){
+            config=Object.fromEntries(new FormData(form))
+            id=form.name
+            fetch(ts_url+id,{
+                headers:tokens.auth_headers,
+                method:'POST',
+                body:JSON.stringify(config)
+            }).then(response=>{
+                if(!response.ok){
+                    response.text().then(text=>{
+                        status_div.innerHTML="Couldn't save settings<br>"+text
+                    })
+                }
+            })
+        }
+    }
+
+    function remove(redeem_form){
+        const id=redeem_form.name
+        redeem_form.remove()
+        fetch(ts_url+id,{
+            headers:tokens.auth_headers,
+            method:'DELETE'
+        })
+        const url=new URL('https://api.twitch.tv/helix/channel_points/custom_rewards')
+        url.search=new URLSearchParams({
+            broadcaster_id:tokens.user_id,
+            id:id
+        })
+        fetch(url,{
+            headers:tokens.auth_headers,
+            method:'DELETE'
+        }).then(response=>{
+            if(!response.ok){
+                response.text().then(text=>{
+                    status_div.innerHTML="Couldn't delete redeem<br>"+text
+                })
+            }
+        })
+    }
+
+    new_form.onsubmit=function(event){
+        event.preventDefault()
+        const redeem_name=event.target.name.value
+        const url=new URL('https://api.twitch.tv/helix/channel_points/custom_rewards')
+        url.searchParams.append('broadcaster_id',tokens.user_id)
+        const headers={'Content-Type':'application/json'}
+        Object.assign(headers,tokens.auth_headers)
+        body=JSON.stringify({
+            title:redeem_name,
+            cost:1,
+            is_enabled:false,
+            is_user_input_required:true
+        })
+        fetch(url,{
+            headers:headers,
+            method:'POST',
+            body:body
+        })
+        .then(response=>response.json())
+        .then(json=>{
+            const redeem=json['data'][0]
+            add_redeem(redeem.id,redeem.title,{voice:'Brian'})
+            event.target.name.value=''
+            save()
+        }).catch(error=>{
+            status_div.innerHTML='Something went wrong, check the console for more details'
+            console.log(error)
+        })
+    }
+
+    document.querySelector('form[name=config]').onsubmit=function(event){
+        event.preventDefault()
+        save()
+    }
+
+    import(tba_url+'tba.mjs')
+    .then(tba=>{
+        status_div.innerHTML='Signing in to Twitch...'
+        return tba.get_tokens(client_id,scope)
+    }).then(response=>{
+        tokens=response
+        if(parseInt(tokens.tier)>=1000){
+            redeem_template.querySelector('[name=ssml]').disabled=false
+        }
+        if(parseInt(tokens.tier)>=2000){
+            redeem_template.querySelector('[name=neural]').disabled=false
+            document.querySelector('#prompt').hidden=true
+        }
+    })
+    .then(()=>import(twitch_polly_url+'twitch-polly.mjs'))
+    .then(polly=>{
+        status_div.innerHTML='Loading voices...'
+        return polly.DescribeVoices(auth_headers=tokens.auth_headers)
+    }).then(voices=>{
+        const voice_list=document.querySelector('datalist#voices')
+        for(voice of voices){
+            const option=document.createElement('option')
+            option.value=voice.Id
+            option.innerHTML=voice.LanguageName+' '+voice.Gender+'\r\n'+voice.SupportedEngines
+            voice_list.appendChild(option)
+            voice_ids.push(voice.Id)
+        }
+        status_div.innerHTML='Loading redeems...'
+        const url=new URL('https://api.twitch.tv/helix/channel_points/custom_rewards')
+        url.search=new URLSearchParams({
+            broadcaster_id:tokens.user_id,
+            only_manageable_rewards:true
+        })
+        return fetch(url,{headers:auth_headers})
+    }).then(response=>response.json())
+    .then(json=>{
+        status_div.innerHTML='Loading settings...'
+        promises=[]
+        redeems=json['data']
+        for(const redeem of redeems){
+            const id=redeem.id
+            const title=redeem.title
+            const promise=fetch(ts_url+id,{headers:tokens.auth_headers})
+            .then(response=>response.json())
+            .then(config=>add_redeem(id,title,config))
+            .catch(error=>{
+                console.warn(error)
+                add_redeem(id,title,{voice:'Brian'})
+            })
+            promises.push(promise)
+        }
+        document.querySelector("div#content").hidden=false
+        return Promise.allSettled(promises)
+    }).then(()=>{
+        status_div.innerHTML='Ready!'
+    }).catch((error)=>{
+        status_div.innerHTML='Something went wrong during loading, check the console for more details'
+        console.error(error)
+    })
+
+</script>

@@ -1,0 +1,199 @@
+<audio autoplay controls></audio>
+<script>
+    const client_id='1gsnqnvtrguxysilfqp5gkb1snswmf'
+    const queue=[]
+    const audio=document.querySelector('audio')
+    
+    let tba,polly,config,tokens,event_socket,socket_session,params,timer_id
+    window.onload=async function(){
+        tba=await import('https://tba.sugoidogo.com/tba.mjs')
+        polly=await import('https://tts.sugoidogo.com/twitch-polly.mjs')
+        tokens=await tba.get_tokens(client_id)
+        params=tba.get_url_params()
+        config=await fetch('https://ts.sugoidogo.com/'+params.redeem_id,{headers:tokens.auth_headers})
+            .then(response=>response.json())
+        console.log(config)
+        connect_socket()
+    }
+
+    function connect_socket(){
+        timer_id=null
+        if(event_socket){
+            event_socket.close()
+        }
+        event_socket=new WebSocket('wss://eventsub.wss.twitch.tv/ws')
+        event_socket.onmessage=function(event){
+            const message=JSON.parse(event.data)
+            console.log(message.metadata.message_type)
+            switch (message.metadata.message_type) {
+                case "session_welcome":{
+                    socket_session=message.payload.session
+                    create_subscription()
+                    start_timer(socket_session.keepalive_timeout_seconds)
+                    break
+                }
+                case "session_keepalive":{
+                    start_timer(socket_session.keepalive_timeout_seconds)
+                    break
+                }
+                case "notification":{
+                    const event=message.payload.event
+                    get_redeems(event.id)
+                    .then(data=>handle_event(data[0]))
+                    break
+                }
+                default:{
+                    console.warn(message)
+                }
+            }
+        }
+    }
+
+    function handle_event(event){
+        console.debug(event)
+        if(event.status=='UNFULFILLED'){
+            speak(event.user_input,event.id)
+        }
+        if(event.status=='CANCELED'){
+            cancel(event.id)
+        }
+    }
+
+    function start_timer(seconds){
+        if(timer_id){
+            clearTimeout(timer_id)
+        }
+        timer_id=setTimeout(connect_socket,seconds*2000)
+    }
+
+    function create_subscription(){
+        const headers={'content-type':'application/json'}
+        Object.assign(headers,tokens.auth_headers)
+        const events=[
+            {
+                "type": "channel.channel_points_custom_reward_redemption.add",
+                "version": "1",
+                "condition": {
+                    "broadcaster_user_id": tokens.user_id,
+                    "reward_id": params.reward_id
+                },
+                "transport": {
+                    "method": "websocket",
+                    "session_id":socket_session.id
+                }
+            },
+            {
+                "type": "channel.channel_points_custom_reward_redemption.update",
+                "version": "1",
+                "condition": {
+                    "broadcaster_user_id": tokens.user_id,
+                    "reward_id": params.reward_id
+                },
+                "transport": {
+                    "method": "websocket",
+                    "session_id":socket_session.id
+                }
+            }
+        ]
+        for(const event of events){
+            const body=JSON.stringify(event)
+            fetch('https://api.twitch.tv/helix/eventsub/subscriptions',{
+                headers:headers,
+                method:'POST',
+                body:body
+            })
+        }
+    }
+
+    function speak(Text,id){
+        TextType='text'
+        Engine='standard'
+        Voice=config.voice
+        if(config.ssml){
+            TextType='ssml'
+        }
+        if(config.neural){
+            Engine='neural'
+        }
+        polly.SynthesizeSpeech(tokens.auth_headers,Text,Voice,TextType,Engine)
+        .then(response=>{
+            if(response.ok){
+                return response.blob()
+            }else{
+                throw response
+            }
+        })
+        .then(blob=>{
+            const url=URL.createObjectURL(blob)
+            queue.push({src:url,id:id})
+            if(queue.length==1){
+                audio.src=url
+            }
+        }).catch(error=>{
+            console.warn('refunding',error)
+            refund(id)
+        })
+    }
+
+    audio.onended=function(){
+        audio.src=null
+        queue.shift()
+        if(queue.length>0){
+            audio.src=queue[0].src
+        }
+    }
+
+    function cancel(reward_id){
+        if(queue.length>0 && queue[0].id==reward_id){
+            audio.onended()
+        }else{
+            for(const reward of queue){
+                if(reward.id==reward_id){
+                    queue.splice(queue.indexOf(reward),1)
+                }
+            }
+        }
+    }
+
+    function refund(reward_id){
+        const url=new URL('https://api.twitch.tv/helix/channel_points/custom_rewards/redemptions')
+        url.search=new URLSearchParams({
+            id:reward_id,
+            broadcaster_id:tokens.user_id,
+            reward_id:params.redeem_id
+        })
+        const body=JSON.stringify({status:'CANCELED'})
+        const headers={'content-type':'application/json'}
+        Object.assign(headers,tokens.auth_headers)
+        fetch(url,{
+            method:'PATCH',
+            headers:headers,
+            body:body
+        })
+    }
+
+    function get_redeems(id=null){
+        const url=new URL('https://api.twitch.tv/helix/channel_points/custom_rewards/redemptions')
+        url.searchParams.append('broadcaster_id',tokens.user_id)
+        url.searchParams.append('reward_id',params.redeem_id)
+        url.searchParams.append('sort','OLDEST')
+        if(id){
+            url.searchParams.append('id',id)
+        }else{
+            url.searchParams.append('status','UNFULFILLED')
+            const cursor=localStorage.getItem('cursor')
+            if(cursor){
+                url.searchParams.append('after',cursor)
+            }
+        }
+        return fetch(url,{headers:tokens.auth_headers})
+        .then(response=>response.json())
+        .then(json=>{
+            if('pagination' in json){
+                localStorage.setItem('cursor',json.pagination.cursor)
+            }
+            return json.data
+        })
+    }
+
+</script>
