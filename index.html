@@ -27,6 +27,13 @@
         </label>
         <br>
         <label>
+            <input type="checkbox" name="preset">
+            Preset Text:
+        </label>
+        <textarea name="presetText"></textarea>
+        <button type="button" onclick="testText(this.parentElement)">Test</button>
+        <br>
+        <label>
             <input type="checkbox" name="ssml" disabled>
             Use SSML (requires tier 1 sub)
         </label>
@@ -48,6 +55,11 @@
     .redeem {
         border-left: 1px solid black;
         padding-left: 10px;
+    }
+    textarea {
+        vertical-align: top;
+        height: 1.5em;
+        width: 20em;
     }
 </style>
 <script>
@@ -102,6 +114,14 @@
                         status_div.innerHTML="Couldn't save settings<br>"+text
                     })
                 }
+            }).then(function(){
+                const url=new URL('https://api.twitch.tv/helix/channel_points/custom_rewards')
+                url.searchParams.append('broadcaster_id',tokens.user_id)
+                url.searchParams.append('id',id)
+                const body=JSON.stringify({'is_user_input_required':!config.preset})
+                const headers={'Content-Type':'application/json'}
+                Object.assign(headers,tokens.auth_headers)
+                fetch(url,{headers:headers,method:'PATCH',body:body})
             })
         }
     }
@@ -224,5 +244,38 @@
         status_div.innerHTML='Something went wrong during loading, check the console for more details'
         console.error(error)
     })
+
+    async function testText(form){
+        const polly=await import('https://tts.sugoidogo.com/twitch-polly.mjs')
+        const config=Object.fromEntries(new FormData(form))
+        console.log(config)
+        let TextType='text'
+        let Engine='standard'
+        let Voice=config.voice
+        if(config.ssml){
+            TextType='ssml'
+        }
+        if(config.neural){
+            Engine='neural'
+        }
+        polly.SynthesizeSpeech(tokens.auth_headers,config.presetText,Voice,TextType,Engine)
+        .then(async response=>{
+            if(response.ok){
+                return response.blob()
+            }else{
+                throw await response.text()
+            }
+        })
+        .then(blob=>{
+            const url=URL.createObjectURL(blob)
+            const audio=document.createElement('audio')
+            audio.src=url
+            audio.autoplay=true
+            document.body.appendChild(audio)
+        }).catch(error=>{
+            window.alert(error)
+            console.error(error)
+        })
+    }
 
 </script>

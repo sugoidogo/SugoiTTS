@@ -52,7 +52,11 @@
     function handle_event(event){
         console.debug(event)
         if(event.status=='UNFULFILLED'){
-            speak(event.user_input,event.id)
+            if(config.preset){
+                speak(config.presetText,event.id)
+            }else{
+                speak(event.user_input,event.id)
+            }
         }
         if(event.status=='CANCELED'){
             cancel(event.id)
