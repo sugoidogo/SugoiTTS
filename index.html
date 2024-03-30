@@ -27,11 +27,20 @@
         </label>
         <br>
         <label>
-            <input type="checkbox" name="preset">
+            <input type="radio" name="type" value="preset">
             Preset Text:
         </label>
         <textarea name="presetText"></textarea>
         <button type="button" onclick="testText(this.parentElement)">Test</button>
+        <br>
+        <label>
+            <input type="radio" name="type" value="dracula">
+            Dracula Flow
+        </label>
+        <label>
+            <input type="radio" name="type" value="input" checked>
+            Viewer input
+        </label>
         <br>
         <label>
             <input type="checkbox" name="ssml" disabled>
@@ -92,6 +101,10 @@
         a.href=url.href
         a.innerHTML=url.href
         for(const name in config){
+            if(name=='preset'){
+                redeem_form['type'].value='preset'
+                continue
+            }
             redeem_form[name].value=config[name]
             if(redeem_form[name].type=='checkbox'){
                 redeem_form[name].checked=name in config
@@ -118,7 +131,7 @@
                 const url=new URL('https://api.twitch.tv/helix/channel_points/custom_rewards')
                 url.searchParams.append('broadcaster_id',tokens.user_id)
                 url.searchParams.append('id',id)
-                const body=JSON.stringify({'is_user_input_required':!config.preset})
+                const body=JSON.stringify({'is_user_input_required':config.type=='preset'})
                 const headers={'Content-Type':'application/json'}
                 Object.assign(headers,tokens.auth_headers)
                 fetch(url,{headers:headers,method:'PATCH',body:body})

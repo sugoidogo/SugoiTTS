@@ -3,6 +3,7 @@
     const client_id='1gsnqnvtrguxysilfqp5gkb1snswmf'
     const queue=[]
     const audio=document.querySelector('audio')
+    let dracula=null;
     
     let tba,polly,config,tokens,event_socket,socket_session,params,timer_id
     window.onload=async function(){
@@ -13,6 +14,9 @@
         config=await fetch('https://ts.sugoidogo.com/'+params.redeem_id,{headers:tokens.auth_headers})
             .then(response=>response.json())
         console.log(config)
+        if(config.type=='dracula'){
+            dracula=(await import('https://sugoidogo.github.io/dracula_flow/dracula_flow.mjs')).default
+        }
         connect_socket()
     }
 
@@ -49,10 +53,12 @@
         }
     }
 
-    function handle_event(event){
+    async function handle_event(event){
         console.debug(event)
         if(event.status=='UNFULFILLED'){
-            if(config.preset){
+            if(config.type=='dracula'){
+                speak(await dracula(1),event.id)
+            }else if(config.preset || config.type=='preset'){
                 speak(config.presetText,event.id)
             }else{
                 speak(event.user_input,event.id)
