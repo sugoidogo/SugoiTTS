@@ -44,12 +44,12 @@
         <br>
         <label>
             <input type="checkbox" name="ssml" disabled>
-            Use SSML (requires tier 1 sub)
+            Use SSML
         </label>
         <br>
         <label>
             <input type="checkbox" name="neural" disabled>
-            Use Neural Voice (requires tier 2 sub)
+            Use Neural Voice
         </label>
         <br>
         <a target="_blank"></a>
@@ -204,13 +204,13 @@
         return tba.get_tokens(client_id,scope)
     }).then(response=>{
         tokens=response
-        if(parseInt(tokens.tier)>=1000){
+        //if(parseInt(tokens.tier)>=1000){
             redeem_template.querySelector('[name=ssml]').disabled=false
-        }
-        if(parseInt(tokens.tier)>=2000){
+        //}
+        //if(parseInt(tokens.tier)>=2000){
             redeem_template.querySelector('[name=neural]').disabled=false
             document.querySelector('#prompt').hidden=true
-        }
+        //}
     })
     .then(()=>import(twitch_polly_url+'twitch-polly.mjs'))
     .then(polly=>{
