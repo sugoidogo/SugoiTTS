@@ -72,23 +72,14 @@
     }
 </style>
 <script>
-    try{
-        const sentry=await import('https://cdn.jsdelivr.net/npm/@sentry/browser@8/+esm')
+    import('https://cdn.jsdelivr.net/npm/@sentry/browser@8/+esm').then(sentry=>{
         sentry.init({
             dsn:'https://94c848565de04860a879df9a34ece8c2@app.glitchtip.com/8354',
             integrations: [
                 sentry.feedbackIntegration({colorScheme:"light"})
-            ],
-            beforeSend(event,hint) {
-                if(event.exception && event.event_id){
-                    sentry.showReportDialog({eventId:event.event_id})
-                }
-                return event
-            }
+            ]
         })
-    }catch(e){
-        console.warn('automatic error reporting failed to load',e)
-    }
+    }).catch(e=>console.warn('automatic error reporting failed to load',e))
     
     const client_id='1gsnqnvtrguxysilfqp5gkb1snswmf'
     const scope='channel:manage:redemptions channel:read:redemptions'
