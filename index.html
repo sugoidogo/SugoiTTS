@@ -75,6 +75,7 @@
     import('https://cdn.jsdelivr.net/npm/@sentry/browser@8/+esm').then(sentry=>{
         sentry.init({
             dsn:'https://94c848565de04860a879df9a34ece8c2@app.glitchtip.com/8354',
+            environment:location.hostname,
             integrations: [
                 sentry.feedbackIntegration({colorScheme:"light"})
             ]
