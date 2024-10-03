@@ -209,7 +209,9 @@
         })
     }
 
+    let get_redeems_try_count=0
     function get_redeems(id=null){
+        get_redeems_try_count++
         const url=new URL('https://api.twitch.tv/helix/channel_points/custom_rewards/redemptions')
         url.searchParams.append('broadcaster_id',tokens.user_id)
         url.searchParams.append('reward_id',params.redeem_id)
@@ -228,6 +230,9 @@
         .then(json=>{
             if('pagination' in json){
                 localStorage.setItem('cursor',json.pagination.cursor)
+            }
+            if(json.data.length===0 && get_redeems_try_count<3){
+                return get_redeems(id)
             }
             return json.data
         })
