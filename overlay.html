@@ -67,7 +67,7 @@
                 case "notification":{
                     const event=message.payload.event
                     get_redeems(event.id)
-                    .then(data=>handle_event(data[0]))
+                    .then(data=>handle_events(data))
                     break
                 }
                 default:{
@@ -77,19 +77,22 @@
         }
     }
 
-    async function handle_event(event){
-        console.debug(event)
-        if(event.status=='UNFULFILLED'){
-            if(config.type=='dracula'){
-                speak(await dracula(1),event.id)
-            }else if(config.preset || config.type=='preset'){
-                speak(config.presetText,event.id)
-            }else{
-                speak(event.user_input,event.id)
+    async function handle_events(events){
+        console.debug(events)
+        for(const event of events){
+            console.debug(event)
+            if(event.status=='UNFULFILLED'){
+                if(config.type=='dracula'){
+                    speak(await dracula(1),event.id)
+                }else if(config.preset || config.type=='preset'){
+                    speak(config.presetText,event.id)
+                }else{
+                    speak(event.user_input,event.id)
+                }
             }
-        }
-        if(event.status=='CANCELED'){
-            cancel(event.id)
+            if(event.status=='CANCELED'){
+                cancel(event.id)
+            }
         }
     }
 
