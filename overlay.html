@@ -231,7 +231,7 @@
             if('pagination' in json){
                 localStorage.setItem('cursor',json.pagination.cursor)
             }
-            if(json.data.length===0 && get_redeems_try_count<3){
+            if(((!json.data) || json.data.length===0) && get_redeems_try_count<3){
                 return get_redeems(id)
             }
             return json.data
