@@ -78,6 +78,10 @@
     }
 
     async function handle_events(events){
+        if(!events){
+            console.warn('handle_events skipped, no events provided')
+            return
+        }
         console.debug(events)
         for(const event of events){
             console.debug(event)
