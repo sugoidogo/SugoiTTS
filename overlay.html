@@ -4,7 +4,8 @@
         const sentry=await import('https://cdn.jsdelivr.net/npm/@sentry/browser@8/+esm')
         sentry.init({
             dsn:'https://94c848565de04860a879df9a34ece8c2@app.glitchtip.com/8354',
-            environment:location.hostname,
+            environmet:location.hostname,
+            release:"1.1.0"
         })
     }catch(e){
         console.warn('automatic error reporting failed to load',e)
