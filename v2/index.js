@@ -179,7 +179,7 @@ async function applyConfig(form, addConfig) {
                 continue
             }
             if (input instanceof HTMLImageElement) {
-                input.src=value
+                input.src=value || 'none.jpg'
                 continue
             }
         }
