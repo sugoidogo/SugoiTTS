@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+
+<head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="index.css">
+    <script type="module" src="index.js"></script>
+</head>
+
+<body>
+    <span class="header">
+        <h1>SugoiTTS</h1>
+        <span id="status_ui">Loading...</span>
+    </span>
+    <span id="config_ui" hidden>
+        <span id="config_list">
+            <template>
+                <form>
+                    <table>
+                        <tr>
+                            <td>Command Name:</td>
+                            <td><input type="text" name="command" value="!tts" required></td>
+                        </tr>
+                        <tr>
+                            <td>Cooldown:</td>
+                            <td>
+                                <input type="number" step="1" min="0" value="0" name="cooldown">
+                                seconds
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Trigger:</td>
+                            <td>
+                                <select name="trigger">
+                                    <option value="chat">Chat Command</option>
+                                    <option value="points">Channel Points</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Voice:</td>
+                            <td><select name="voice"></select></td>
+                        </tr>
+                        <tr>
+                            <td>Engine:</td>
+                            <td><select name="engine"></select></td>
+                        </tr>
+                        <tr>
+                            <td><br></td>
+                        </tr>
+                        <tr>
+                            <td><label>
+                                    <input type="radio" name="type" value="preset" checked>
+                                    Speak Preset Text:
+                                </label></td>
+                            <td>
+                                <span class="flex">
+                                    <textarea name="presetText" rows="1">I am a robot</textarea>
+                                    <button type="button" class="test">test</button>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><label>
+                                    <input type="radio" name="type" value="input">
+                                    Speak User Input
+                                </label></td>
+                        </tr>
+                        <tr>
+                            <td><label>
+                                    <input type="radio" name="type" value="dracula">
+                                    Speak Dracula Flow
+                                </label></td>
+                        </tr>
+                        <tr>
+                            <td><br></td>
+                        </tr>
+                        <tr>
+                            <td><label>
+                                    <input type="checkbox" name="allowAll" checked>
+                                    Allow Everyone
+                                </label></td>
+                        </tr>
+                        <tr>
+                            <td><label>
+                                    <input type="checkbox" name="allowEditors">
+                                    Allow Editors
+                                </label></td>
+                        </tr>
+                        <tr>
+                            <td><label>
+                                    <input type="checkbox" name="allowMods">
+                                    Allow Mods
+                                </label></td>
+                        </tr>
+                        <tr>
+                            <td><label>
+                                    <input type="checkbox" name="allowVIPs">
+                                    Allow VIPs
+                                </label></td>
+                        </tr>
+                        <tr>
+                            <td><label>
+                                    <input type="checkbox" name="allowUsers">
+                                    Allow Specific User(s):
+                                </label></td>
+                            <td>
+                                <span class="flex">
+                                    <form>
+                                        <input type="text" name="username" required>
+                                        <button type="submit">add</button>
+                                    </form>
+                                </span>
+                                <table class="users"></table>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Idle Image <br>
+                                <input type="file" accept="image/*">
+                                <input type="text" name="img_idle" class="hidden">
+                                <br>
+                                <img name="img_idle" src="none.jpg">
+                            </td>
+                            <td>
+                                Active Image <br>
+                                <input type="file" accept="image/*">
+                                <input type="text" name="img_active" class="hidden">
+                                <br>
+                                <img name="img_active" src="none.jpg">
+                            </td>
+                        </tr>
+                    </table>
+                    <br>
+                    <button type="submit">Save</button>
+                    <button type="reset">Reset</button>
+                    <button type="button" class="delete">Delete</button>
+                </form>
+            </template>
+        </span>
+        <br>
+        <button type="button" class="new">Create New TTS</button>
+    </span>
+</body>
