@@ -108,8 +108,8 @@ async function queueTTS(ttsRequest){
         }
         if(ttsRequest.redeemId){
             apiClient.channelPoints.updateRedemptionStatusByIds(broadcaster_id,id,[ttsRequest.redeemId],'CANCELED')
-            return
         }
+        return
     }
     let text=null
     switch(config.type){
