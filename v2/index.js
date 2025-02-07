@@ -35,12 +35,14 @@ const webStorage = new WebStorage(authProvider)
 /** @type {import('./node_modules/cloudflare-polly-proxy/static/twitch-polly.mjs').Polly} */
 const polly = new Polly(authProvider)
 
+const refresh_token = await authProvider.getAccessTokenForUser().then(token => token.refresh_token)
 const user_id = await apiClient.getTokenInfo().then(info => info.userId)
 console.debug('userID: ' + user_id)
 
 const template = document.querySelector('template').content.cloneNode(true)
 const config_list = document.querySelector('#config_list')
 const config_ui = document.querySelector('#config_ui')
+const combined_link=document.querySelector('a')
 
 status_ui.innerHTML = 'Loading voices...'
 const voices = await polly.DescribeVoices()
@@ -246,13 +248,7 @@ async function onSubmitConfig(event) {
         throw new Error(response.statusText, { cause: response })
     }
     applyConfig(form, config)
-    status_ui.innerHTML = 'Copying URL to clipboard...'
-    const url = new URL('tts.html', location)
-    config.id = form.id
-    const refresh_token = await authProvider.getAccessTokenForUser().then(token => token.refresh_token)
-    url.search = new URLSearchParams({id:config.id,refresh_token}).toString()
-    await navigator.clipboard.writeText(url.toString())
-    let status = 'Settings saved, URL copied.'
+    let status = 'Settings saved.'
     if (warning_reward_disabled) {
         status += ' Your channel point reward is disabled, enable it <a href="https://dashboard.twitch.tv/viewer-rewards/channel-points/rewards">here.</a>'
     }
@@ -306,6 +302,10 @@ function addConfig(config = {}) {
     const addUserForm = form.querySelector('form')
     addUserForm.onsubmit = onSubmitUser
     form.id = config.id || Date.now()
+    const link=form.querySelector('a')
+    const url = new URL('tts.html', location)
+    url.search = new URLSearchParams({id:config.id,refresh_token}).toString()
+    link.href=url.href
     const voiceSelect = form.querySelector('select[name=voice]')
     voiceSelect.onchange = onVoiceChange
     const deleteButton = form.querySelector('button.delete')
@@ -378,11 +378,12 @@ await webStorage.fetch('v2/').then(async response => {
     }
     return response.json()
 }).then(async configs => {
-    console.debug('found ' + configs.length + ' configs for user')
+    status_ui.innerHTML='Loading 4 configs...'
     for (const id of configs) {
         const config = await webStorage.fetch('v2/' + id).then(response => response.json())
         config.id = id
         addConfig(config)
+        status_ui.innerHTML='Loaded '+config.command+'...'
     }
 }, error => console.warn(error))
 
@@ -428,6 +429,11 @@ await apiClient.channelPoints.getCustomRewards(user_id, true).then(async functio
 })
 
 document.querySelector('button.new').onclick = () => addConfig()
+
+const combined_url=new URL('tts-all.html',location)
+combined_url.searchParams.append('refresh_token',refresh_token)
+combined_link.href=combined_url.href
+combined_link.hidden=false
 
 config_ui.hidden = false
 status_ui.innerHTML = "Ready"
